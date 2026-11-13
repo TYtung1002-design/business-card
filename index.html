@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>電子名片</title>
+<meta name="description" content="Digital business card">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- QR code 產生工具（從 CDN 載入） -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+/* ========== 顏色設定（淺色模式） ========== */
+:root {
+  --bg-grad: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 45%, #cffafe 100%);
+  --blob1: #60a5fa;
+  --blob2: #22d3ee;
+  --blob3: #818cf8;
+  --glass: rgba(255, 255, 255, 0.45);
+  --glass-strong: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.75);
+  --shadow: 0 8px 32px rgba(30, 64, 175, 0.12);
+  --text: #0f2744;
+  --muted: #4a6584;
+  --accent: #2563eb;
+  --accent2: #0891b2;
+  --chip-bg: rgba(37, 99, 235, 0.10);
+  --chip-text: #1e40af;
+  --warn: #b45309;
+  color-scheme: light;
+}
+/* ========== 深色模式（跟隨系統設定） ========== */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-grad: linear-gradient(135deg, #0b1528 0%, #0f2342 50%, #082f49 100%);
+    --blob1: #1d4ed8;
+    --blob2: #0e7490;
+    --blob3: #4338ca;
+    --glass: rgba(15, 30, 60, 0.45);
+    --glass-strong: rgba(15, 30, 60, 0.7);
+    --glass-border: rgba(148, 197, 255, 0.18);
+    --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    --text: #e6f0ff;
+    --muted: #9db4d3;
+    --accent: #3b82f6;
+    --accent2: #06b6d4;
+    --chip-bg: rgba(96, 165, 250, 0.15);
+    --chip-text: #bfdbfe;
+    --warn: #fbbf24;
+    color-scheme: dark;
+  }
+}
+/* ========== 深色模式（手動切換） ========== */
+:root[data-theme="dark"] {
+  --bg-grad: linear-gradient(135deg, #0b1528 0%, #0f2342 50%, #082f49 100%);
+  --blob1: #1d4ed8;
+  --blob2: #0e7490;
+  --blob3: #4338ca;
+  --glass: rgba(15, 30, 60, 0.45);
+  --glass-strong: rgba(15, 30, 60, 0.7);
+  --glass-border: rgba(148, 197, 255, 0.18);
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --text: #e6f0ff;
+  --muted: #9db4d3;
+  --accent: #3b82f6;
+  --accent2: #06b6d4;
+  --chip-bg: rgba(96, 165, 250, 0.15);
+  --chip-text: #bfdbfe;
+  --warn: #fbbf24;
+  color-scheme: dark;
+}
+
+/* ========== 基本設定 ========== */
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; padding: 0; }
+body {
+  min-height: 100vh;
+  background: var(--bg-grad);
+  background-attachment: fixed;
+  color: var(--text);
+  font-family: "Inter", system-ui, -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei",
+    "Hiragino Sans", "Yu Gothic", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
+
+/* ========== 背景的模糊光暈 ========== */
+.bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
+.blob {
+  position: absolute; border-radius: 50%;
+  filter: blur(70px); opacity: 0.55;
+}
+.b1 { width: 340px; height: 340px; background: var(--blob1); top: -80px; left: -60px; }
+.b2 { width: 300px; height: 300px; background: var(--blob2); bottom: -60px; right: -40px; }
+.b3 { width: 260px; height: 260px; background: var(--blob3); top: 40%; left: 55%; }
+@media (prefers-reduced-motion: no-preference) {
+  .blob { animation: float 18s ease-in-out infinite alternate; }
+  .b2 { animation-duration: 22s; }
+  .b3 { animation-duration: 26s; }
+  @keyframes float {
+    from { transform: translate(0, 0) scale(1); }
+    to { transform: translate(40px, 30px) scale(1.12); }
+  }
+}
+
+/* ========== 毛玻璃卡片 ========== */
+.glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  padding: 24px;
+}
+
+/* ========== 版面 ========== */
+.topbar, .wrap { max-width: 560px; margin: 0 auto; }
+.topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 16px 0; gap: 12px;
+}
+.wrap { padding: 16px 16px 48px; display: grid; gap: 16px; }
+
+/* 語言選單 */
+.lang-wrap {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 999px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border);
+  color: var(--muted);
+}
+.lang-wrap select {
+  appearance: none; -webkit-appearance: none;
+  border: none; background: transparent; color: var(--text);
+  font: inherit; font-weight: 500; cursor: pointer; padding-right: 4px;
+}
+.lang-wrap select option { color: #0f2744; background: #ffffff; }
+
+.icon-btn {
+  width: 42px; height: 42px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
+}
+.icon { width: 20px; height: 20px; flex-shrink: 0; }
+
+/* ========== 主卡片 ========== */
+.hero { text-align: center; padding-top: 32px; }
+.avatar {
+  width: 108px; height: 108px; margin: 0 auto 16px;
+  border-radius: 50%; padding: 4px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+}
+.avatar-inner {
+  width: 100%; height: 100%; border-radius: 50%;
+  background: var(--glass-strong);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 34px; font-weight: 600; color: var(--accent);
+  overflow: hidden;
+}
+.avatar-inner img { width: 100%; height: 100%; object-fit: cover; }
+h1 { font-size: 28px; font-weight: 600; margin: 0; letter-spacing: 0.02em; }
+.name-secondary { margin: 2px 0 0; color: var(--muted); font-size: 16px; }
+.role { margin: 14px 0 0; color: var(--text); font-size: 15px; }
+.role span { display: block; }
+.role .org { color: var(--muted); font-size: 14px; }
+
+/* 按鈕 */
+.actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 22px; border-radius: 999px; border: none;
+  font-weight: 500; font-size: 15px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #ffffff;
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
+}
+.btn.ghost {
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
+}
+
+/* ========== 區塊標題 ========== */
+h2 {
+  font-size: 14px; font-weight: 600; margin: 0 0 14px;
+  color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase;
+}
+.bio { margin: 0; color: var(--text); }
+
+/* ========== 聯絡方式 ========== */
+.contact-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.contact-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px; border-radius: 16px;
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+}
+.contact-icon {
+  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--chip-bg); color: var(--accent);
+}
+.contact-text { flex: 1; min-width: 0; }
+.contact-label { display: block; font-size: 12px; color: var(--muted); }
+.contact-value { display: block; font-weight: 500; word-break: break-all; }
+a.contact-value:hover { color: var(--accent); }
+.copy-btn {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  border: none; background: transparent; color: var(--muted);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.copy-btn:hover { background: var(--chip-bg); color: var(--accent); }
+.copy-btn .icon { width: 18px; height: 18px; }
+
+/* ========== 專長標籤 ========== */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  padding: 6px 14px; border-radius: 999px; font-size: 14px; font-weight: 500;
+  background: var(--chip-bg); color: var(--chip-text);
+  border: 1px solid var(--glass-border);
+}
+
+/* ========== QR code ========== */
+.qr-sec { text-align: center; }
+.seg {
+  display: inline-flex; padding: 4px; border-radius: 999px; gap: 4px;
+  background: var(--glass-strong); border: 1px solid var(--glass-border);
+  max-width: 100%;
+}
+.seg-btn {
+  border: none; background: transparent; padding: 8px 14px; border-radius: 999px;
+  font-size: 14px; color: var(--muted); font-weight: 500;
+}
+.seg-btn.active { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #ffffff; }
+.qr-box {
+  background: #ffffff; padding: 12px; border-radius: 18px;
+  width: fit-content; margin: 18px auto 10px;
+  box-shadow: 0 6px 24px rgba(30, 64, 175, 0.15);
+}
+.qr-box canvas { display: block; width: 220px; height: 220px; }
+.qr-fallback { width: 220px; padding: 40px 12px; color: #4a6584; font-size: 14px; }
+.hint { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
+.warn { margin: 8px 0 0; font-size: 13px; color: var(--warn); }
+
+footer { text-align: center; font-size: 13px; color: var(--muted); padding: 8px 0 0; }
+
+/* ========== 提示訊息 ========== */
+.toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px);
+  background: rgba(15, 39, 68, 0.88); color: #ffffff;
+  padding: 10px 20px; border-radius: 999px; font-size: 14px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 420px) {
+  .glass { padding: 20px; border-radius: 20px; }
+  h1 { font-size: 24px; }
+  .seg-btn { padding: 8px 10px; font-size: 13px; }
+}
+
+/* ========== 列印版面（名片正反面，9 x 5.4 公分） ========== */
+.print-sheet { display: none; }
+@page { size: A4; margin: 15mm; }
+@media print {
+  body { background: #ffffff !important; }
+  .bg, .topbar, .wrap, .toast { display: none !important; }
+  .print-sheet { display: flex !important; flex-direction: column; align-items: center; gap: 10mm; }
+}
+.pcard {
+  width: 90mm; height: 54mm; position: relative; overflow: hidden;
+  border: 0.3mm dashed #94a3b8; border-radius: 3mm;
+  background: #ffffff; color: #0f2744;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  font-family: "Inter", system-ui, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Hiragino Sans", "Malgun Gothic", sans-serif;
+}
+.pcard-front { padding: 6mm 6mm 5mm 9mm; display: flex; flex-direction: column; }
+.pcard-front .bar {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 3mm;
+  background: linear-gradient(180deg, #2563eb, #06b6d4);
+}
+.pcard-front .p-name { font-size: 15pt; font-weight: 600; line-height: 1.2; }
+.pcard-front .p-name2 { font-size: 8.5pt; color: #4a6584; }
+.pcard-front .p-role { font-size: 8pt; margin-top: 2mm; line-height: 1.4; }
+.pcard-front .p-role .org { color: #4a6584; }
+.pcard-front .p-contacts { margin-top: auto; font-size: 7.5pt; line-height: 1.5; color: #0f2744; }
+.pcard-back {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2mm;
+  background: linear-gradient(135deg, #e0f2fe, #dbeafe 50%, #cffafe);
+}
+.pcard-back img { width: 30mm; height: 30mm; background: #ffffff; padding: 1.5mm; border-radius: 2mm; }
+.pcard-back .p-scan { font-size: 8pt; color: #1e40af; font-weight: 500; }
+.pcard-back .p-name { font-size: 9pt; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="bg" aria-hidden="true">
+  <span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span>
+</div>
+
+<header class="topbar">
+  <label class="lang-wrap">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+    <select id="langSelect" aria-label="Language"></select>
+  </label>
+  <button id="themeBtn" class="icon-btn" type="button"></button>
+</header>
+
+<main class="wrap">
+  <!-- 主卡片：頭像、姓名、職稱 -->
+  <section class="glass hero">
+    <div class="avatar"><div class="avatar-inner" id="avatar"></div></div>
+    <h1 id="namePrimary"></h1>
+    <p class="name-secondary" id="nameSecondary"></p>
+    <p class="role" id="roleLine"></p>
+    <div class="actions">
+      <button id="vcfBtn" class="btn primary" type="button">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M19 8v6M16 11h6"/></svg>
+        <span data-i18n="saveContact"></span>
+      </button>
+    </div>
+  </section>
+
+  <!-- 關於我 -->
+  <section class="glass" id="aboutSec">
+    <h2 data-i18n="about"></h2>
+    <p class="bio" id="bio"></p>
+  </section>
+
+  <!-- 聯絡方式 -->
+  <section class="glass" id="contactSec">
+    <h2 data-i18n="contact"></h2>
+    <ul class="contact-list" id="contactList"></ul>
+  </section>
+
+  <!-- 專長 -->
+  <section class="glass" id="skillsSec">
+    <h2 data-i18n="skills"></h2>
+    <div class="chips" id="skillList"></div>
+  </section>
+
+  <!-- QR code -->
+  <section class="glass qr-sec">
+    <h2 data-i18n="qrTitle"></h2>
+    <div class="seg" role="group">
+      <button class="seg-btn" type="button" data-mode="url" data-i18n="qrUrl"></button>
+      <button class="seg-btn" type="button" data-mode="vcard" data-i18n="qrVcard"></button>
+    </div>
+    <div class="qr-box" id="qrBox"><canvas id="qrCanvas" aria-label="QR code" role="img"></canvas></div>
+    <p class="hint" id="qrHint"></p>
+    <p class="warn" id="qrWarn" hidden></p>
+    <div class="actions">
+      <button id="dlQrBtn" class="btn ghost" type="button">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+        <span data-i18n="downloadQr"></span>
+      </button>
+      <button id="printBtn" class="btn ghost" type="button">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg>
+        <span data-i18n="print"></span>
+      </button>
+    </div>
+  </section>
+
+  <footer data-i18n="footer"></footer>
+</main>
+
+<!-- 列印用的名片（平常隱藏，列印時才顯示） -->
+<div class="print-sheet" id="printSheet"></div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* =====================================================================
+   資料設定區：只要修改這裡的文字就好，不用動到下面的程式
+   - 每個語言可以各填一個版本，沒填的語言會自動顯示英文版（en）
+   - 留空 "" 或 {} 的欄位會自動隱藏，不會出現空格
+   ===================================================================== */
+const PROFILE = {
+  // 頭像圖片：把照片和 index.html 放在同一個 repo，填檔名，例如 "photo.jpg"；留空會顯示姓名縮寫
+  photo: "",
+
+  // 名片網址：放上 GitHub Pages 後填入，例如 "https://你的帳號.github.io/repo名稱/"
+  // 留空的話會自動使用目前網頁的網址
+  siteUrl: "",
+
+  // 姓名（真實資料）
+  name: {
+    "zh-TW": "董亭妤",
+    "zh-CN": "董亭妤",
+    "ja": "董亭妤",
+    "en": "Ting-Yu Tung"
+  },
+  // 姓名拆成姓和名（下載聯絡人 VCF 時使用）
+  nameParts: { family: "Tung", given: "Ting-Yu", familyZh: "董", givenZh: "亭妤" },
+
+  // 職稱或身分
+  title: {
+    "zh-TW": "研究生",
+    "zh-CN": "研究生",
+    "en": "Graduate Student",
+    "ja": "大学院生",
+    "ko": "대학원생",
+    "vi": "Học viên cao học",
+    "es": "Estudiante de posgrado"
+  },
+
+  // 學校／單位（真實資料）
+  org: {
+    "zh-TW": "臺北醫學大學",
+    "zh-CN": "台北医学大学",
+    "en": "Taipei Medical University",
+    "ja": "台北医学大学",
+    "vi": "Đại học Y Đài Bắc",
+    "es": "Universidad Médica de Taipéi"
+  },
+
+  // 系所，例如 { "zh-TW": "OO研究所", "en": "Graduate Institute of OO" }
+  dept: {},
+
+  // 聯絡方式（留空就不顯示）
+  email: "m946115002@tmu.edu.tw",
+  phone: "",      // 例如 "+886 912 345 678"
+  website: "",    // 例如 "https://example.com"
+  github: "",     // 填帳號名稱或完整網址，例如 "your-account"
+  linkedin: "",   // 填完整網址，例如 "https://www.linkedin.com/in/your-name"
+  address: {},    // 例如 { "zh-TW": "臺北市信義區…", "en": "Xinyi Dist., Taipei" }
+
+  // 自我介紹（範例文字，之後請改成你自己的）
+  bio: {
+    "zh-TW": "熱衷於資料分析與智慧醫療應用，目前正在學習物聯網與大數據技術，期待與你交流。",
+    "zh-CN": "热衷于数据分析与智慧医疗应用，目前正在学习物联网与大数据技术，期待与你交流。",
+    "en": "Passionate about data analytics and smart healthcare. Currently learning IoT and big data technologies, and always happy to connect.",
+    "ja": "データ分析とスマートヘルスケアに関心があり、現在IoTとビッグデータ技術を学んでいます。お気軽にご連絡ください。",
+    "ko": "데이터 분석과 스마트 헬스케어에 관심이 많으며, 현재 IoT와 빅데이터 기술을 배우고 있습니다. 편하게 연락 주세요.",
+    "vi": "Quan tâm đến phân tích dữ liệu và y tế thông minh, hiện đang học công nghệ IoT và dữ liệu lớn. Rất vui được kết nối.",
+    "es": "Me apasionan el análisis de datos y la salud inteligente. Actualmente aprendo tecnologías de IoT y big data. ¡Será un gusto conectar!"
+  },
+
+  // 專長標籤（範例，之後請改成你自己的）
+  skills: {
+    "zh-TW": ["資料分析", "Python", "SAS", "物聯網 IoT"],
+    "zh-CN": ["数据分析", "Python", "SAS", "物联网 IoT"],
+    "en": ["Data analysis", "Python", "SAS", "IoT"],
+    "ja": ["データ分析", "Python", "SAS", "IoT"],
+    "ko": ["데이터 분석", "Python", "SAS", "IoT"],
+    "vi": ["Phân tích dữ liệu", "Python", "SAS", "IoT"],
+    "es": ["Análisis de datos", "Python", "SAS", "IoT"]
+  }
+};
+/* ======================= 資料設定區結束 ======================= */
+
+
+/* ---------- 支援的語言 ---------- */
+const LANGS = [
+  { code: "zh-TW", label: "繁體中文", html: "zh-Hant-TW" },
+  { code: "zh-CN", label: "简体中文", html: "zh-Hans-CN" },
+  { code: "en", label: "English", html: "en" },
+  { code: "ja", label: "日本語", html: "ja" },
+  { code: "ko", label: "한국어", html: "ko" },
+  { code: "vi", label: "Tiếng Việt", html: "vi" },
+  { code: "es", label: "Español", html: "es" }
+];
+
+/* ---------- 介面文字翻譯 ---------- */
+const I18N = {
+  "zh-TW": {
+    cardTitle: "電子名片", about: "關於我", contact: "聯絡方式", skills: "專長",
+    email: "電子郵件", phone: "電話", website: "個人網站", github: "GitHub", linkedin: "LinkedIn", address: "地址",
+    saveContact: "加入聯絡人（VCF）", qrTitle: "掃描 QR code",
+    qrUrl: "開啟名片網頁", qrVcard: "直接加入聯絡人",
+    qrHintUrl: "掃描後會開啟這張電子名片",
+    qrHintVcard: "掃描後手機會直接新增聯絡人，不需要網路",
+    downloadQr: "下載 QR 圖片", print: "列印名片",
+    copy: "複製", copied: "已複製", copyFail: "無法複製", vcfDone: "已下載聯絡人檔案",
+    theme: "切換深淺色",
+    fileWarn: "目前是在本機開啟，QR code 裡的網址別人無法使用；放上 GitHub Pages 後就會正常。",
+    qrFail: "QR code 元件載入失敗，請確認網路連線。",
+    scanMe: "掃描加入聯絡人",
+    footer: "以 HTML、CSS 與 JavaScript 製作的靜態電子名片"
+  },
+  "zh-CN": {
+    cardTitle: "电子名片", about: "关于我", contact: "联系方式", skills: "专长",
+    email: "电子邮件", phone: "电话", website: "个人网站", github: "GitHub", linkedin: "LinkedIn", address: "地址",
+    saveContact: "添加联系人（VCF）", qrTitle: "扫描二维码",
+    qrUrl: "打开名片网页", qrVcard: "直接添加联系人",
+    qrHintUrl: "扫描后会打开这张电子名片",
+    qrHintVcard: "扫描后手机会直接新增联系人，无需网络",
+    downloadQr: "下载二维码图片", print: "打印名片",
+    copy: "复制", copied: "已复制", copyFail: "无法复制", vcfDone: "已下载联系人文件",
+    theme: "切换深浅色",
+    fileWarn: "当前为本地打开，二维码中的网址他人无法使用；发布到 GitHub Pages 后即可正常使用。",
+    qrFail: "二维码组件加载失败，请检查网络连接。",
+    scanMe: "扫码添加联系人",
+    footer: "使用 HTML、CSS 与 JavaScript 制作的静态电子名片"
+  },
+  "en": {
+    cardTitle: "Digital Business Card", about: "About", contact: "Contact", skills: "Skills",
+    email: "Email", phone: "Phone", website: "Website", github: "GitHub", linkedin: "LinkedIn", address: "Address",
+    saveContact: "Save contact (VCF)", qrTitle: "Scan the QR code",
+    qrUrl: "Open card page", qrVcard: "Add contact directly",
+    qrHintUrl: "Scanning opens this digital business card",
+    qrHintVcard: "Scanning adds the contact straight to the phone, no internet needed",
+    downloadQr: "Download QR image", print: "Print card",
+    copy: "Copy", copied: "Copied", copyFail: "Couldn't copy", vcfDone: "Contact file downloaded",
+    theme: "Toggle light/dark theme",
+    fileWarn: "You're viewing a local file, so the link in the QR code won't work for others yet. It will once published on GitHub Pages.",
+    qrFail: "The QR code library failed to load. Please check your connection.",
+    scanMe: "Scan to connect",
+    footer: "A static digital business card built with HTML, CSS and JavaScript"
+  },
+  "ja": {
+    cardTitle: "デジタル名刺", about: "自己紹介", contact: "連絡先", skills: "スキル",
+    email: "メール", phone: "電話", website: "ウェブサイト", github: "GitHub", linkedin: "LinkedIn", address: "住所",
+    saveContact: "連絡先に追加（VCF）", qrTitle: "QRコードをスキャン",
+    qrUrl: "名刺ページを開く", qrVcard: "連絡先に直接追加",
+    qrHintUrl: "スキャンするとこのデジタル名刺が開きます",
+    qrHintVcard: "スキャンするとスマートフォンに連絡先が直接追加されます（ネット不要）",
+    downloadQr: "QR画像をダウンロード", print: "名刺を印刷",
+    copy: "コピー", copied: "コピーしました", copyFail: "コピーできませんでした", vcfDone: "連絡先ファイルをダウンロードしました",
+    theme: "ライト／ダーク切替",
+    fileWarn: "ローカルファイルで表示中のため、QRコードのリンクは他の人には使えません。GitHub Pagesで公開すると使えるようになります。",
+    qrFail: "QRコードのライブラリを読み込めませんでした。接続を確認してください。",
+    scanMe: "スキャンして連絡先を追加",
+    footer: "HTML・CSS・JavaScriptで作った静的デジタル名刺"
+  },
+  "ko": {
+    cardTitle: "디지털 명함", about: "소개", contact: "연락처", skills: "전문 분야",
+    email: "이메일", phone: "전화", website: "웹사이트", github: "GitHub", linkedin: "LinkedIn", address: "주소",
+    saveContact: "연락처 저장 (VCF)", qrTitle: "QR 코드 스캔",
+    qrUrl: "명함 페이지 열기", qrVcard: "연락처 바로 추가",
+    qrHintUrl: "스캔하면 이 디지털 명함이 열립니다",
+    qrHintVcard: "스캔하면 휴대폰에 연락처가 바로 추가됩니다 (인터넷 불필요)",
+    downloadQr: "QR 이미지 다운로드", print: "명함 인쇄",
+    copy: "복사", copied: "복사됨", copyFail: "복사할 수 없습니다", vcfDone: "연락처 파일을 다운로드했습니다",
+    theme: "라이트/다크 테마 전환",
+    fileWarn: "로컬 파일로 열려 있어 QR 코드의 링크를 다른 사람이 사용할 수 없습니다. GitHub Pages에 게시하면 정상적으로 작동합니다.",
+    qrFail: "QR 코드 라이브러리를 불러오지 못했습니다. 연결을 확인하세요.",
+    scanMe: "스캔하여 연락처 추가",
+    footer: "HTML, CSS, JavaScript로 만든 정적 디지털 명함"
+  },
+  "vi": {
+    cardTitle: "Danh thiếp điện tử", about: "Giới thiệu", contact: "Liên hệ", skills: "Chuyên môn",
+    email: "Email", phone: "Điện thoại", website: "Trang web", github: "GitHub", linkedin: "LinkedIn", address: "Địa chỉ",
+    saveContact: "Lưu liên hệ (VCF)", qrTitle: "Quét mã QR",
+    qrUrl: "Mở trang danh thiếp", qrVcard: "Thêm liên hệ trực tiếp",
+    qrHintUrl: "Quét để mở danh thiếp điện tử này",
+    qrHintVcard: "Quét để thêm liên hệ thẳng vào điện thoại, không cần mạng",
+    downloadQr: "Tải ảnh QR", print: "In danh thiếp",
+    copy: "Sao chép", copied: "Đã sao chép", copyFail: "Không thể sao chép", vcfDone: "Đã tải tệp liên hệ",
+    theme: "Đổi giao diện sáng/tối",
+    fileWarn: "Bạn đang mở tệp cục bộ nên người khác chưa dùng được liên kết trong mã QR. Sau khi đăng lên GitHub Pages sẽ hoạt động bình thường.",
+    qrFail: "Không tải được thư viện mã QR. Vui lòng kiểm tra kết nối mạng.",
+    scanMe: "Quét để lưu liên hệ",
+    footer: "Danh thiếp điện tử tĩnh làm bằng HTML, CSS và JavaScript"
+  },
+  "es": {
+    cardTitle: "Tarjeta digital", about: "Sobre mí", contact: "Contacto", skills: "Habilidades",
+    email: "Correo", phone: "Teléfono", website: "Sitio web", github: "GitHub", linkedin: "LinkedIn", address: "Dirección",
+    saveContact: "Guardar contacto (VCF)", qrTitle: "Escanea el código QR",
+    qrUrl: "Abrir la tarjeta", qrVcard: "Añadir contacto",
+    qrHintUrl: "Al escanearlo se abre esta tarjeta de presentación digital",
+    qrHintVcard: "Al escanearlo se añade el contacto directamente al móvil, sin internet",
+    downloadQr: "Descargar imagen QR", print: "Imprimir tarjeta",
+    copy: "Copiar", copied: "Copiado", copyFail: "No se pudo copiar", vcfDone: "Archivo de contacto descargado",
+    theme: "Cambiar tema claro/oscuro",
+    fileWarn: "Estás viendo un archivo local, así que el enlace del código QR aún no funcionará para otros. Funcionará al publicarlo en GitHub Pages.",
+    qrFail: "No se pudo cargar la biblioteca de códigos QR. Comprueba tu conexión.",
+    scanMe: "Escanea para conectar",
+    footer: "Tarjeta de presentación digital estática hecha con HTML, CSS y JavaScript"
+  }
+};
+
+/* ---------- 圖示（SVG） ---------- */
+const ICONS = {
+  email: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+  phone: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>',
+  website: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  github: '<path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 4l-4 16"/>',
+  linkedin: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/>',
+  address: '<path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+  copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'
+};
+function svgIcon(name) {
+  return '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[name] + '</svg>';
+}
+
+/* ---------- 小工具 ---------- */
+const $ = (id) => document.getElementById(id);
+
+// 安全地讀寫瀏覽器儲存空間（某些情況下會被瀏覽器封鎖，所以用 try/catch 包起來）
+function store(key, value) {
+  try {
+    if (value === undefined) return localStorage.getItem(key);
+    localStorage.setItem(key, value);
+  } catch (e) { return null; }
+}
+
+// 依照語言取出對應的文字；沒有該語言就用英文，再沒有就用繁中
+function pick(field, lang) {
+  if (field == null) return "";
+  if (typeof field === "string" || Array.isArray(field)) return field;
+  return field[lang] || field.en || field["zh-TW"] || "";
+}
+
+// 建立 HTML 元素（用 textContent 放文字，避免特殊符號出問題）
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+}
+
+/* ---------- 目前狀態 ---------- */
+let lang = detectLang();
+let qrMode = store("card-qr-mode") === "vcard" ? "vcard" : "url";
+
+// 決定一開始要顯示的語言：網址參數 ?lang= → 上次選擇 → 瀏覽器語言 → 繁中
+function detectLang() {
+  const codes = LANGS.map((l) => l.code);
+  const fromUrl = new URLSearchParams(location.search).get("lang");
+  if (fromUrl && codes.includes(fromUrl)) return fromUrl;
+  const saved = store("card-lang");
+  if (saved && codes.includes(saved)) return saved;
+  const prefs = navigator.languages || [navigator.language || ""];
+  for (const p of prefs) {
+    const lower = String(p).toLowerCase();
+    if (lower.startsWith("zh")) {
+      return /cn|hans|sg/.test(lower) ? "zh-CN" : "zh-TW";
+    }
+    const short = lower.slice(0, 2);
+    if (codes.includes(short)) return short;
+  }
+  return "zh-TW";
+}
+
+/* ---------- 姓名相關 ---------- */
+function primaryName() { return pick(PROFILE.name, lang); }
+function secondaryName() {
+  const primary = primaryName();
+  const other = primary === PROFILE.name.en ? PROFILE.name["zh-TW"] : PROFILE.name.en;
+  return other && other !== primary ? other : "";
+}
+function initials() {
+  const en = PROFILE.name.en || "";
+  const parts = en.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return (PROFILE.name["zh-TW"] || "?").slice(0, 1);
+  return parts.map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+}
+
+/* ---------- 網址處理 ---------- */
+function fullUrl(value, prefix) {
+  if (!value) return "";
+  return /^https?:\/\//i.test(value) ? value : prefix + value.replace(/^\/+/, "");
+}
+function prettyUrl(url) { return url.replace(/^https?:\/\//i, "").replace(/\/$/, ""); }
+
+// 整理出要顯示的聯絡方式（空白的自動略過）
+function contactItems() {
+  const items = [];
+  if (PROFILE.email) items.push({ key: "email", value: PROFILE.email, href: "mailto:" + PROFILE.email });
+  if (PROFILE.phone) items.push({ key: "phone", value: PROFILE.phone, href: "tel:" + PROFILE.phone.replace(/[^\d+]/g, "") });
+  if (PROFILE.website) {
+    const u = fullUrl(PROFILE.website, "https://");
+    items.push({ key: "website", value: prettyUrl(u), href: u, copyValue: u });
+  }
+  if (PROFILE.github) {
+    const u = fullUrl(PROFILE.github, "https://github.com/");
+    items.push({ key: "github", value: prettyUrl(u), href: u, copyValue: u });
+  }
+  if (PROFILE.linkedin) {
+    const u = fullUrl(PROFILE.linkedin, "https://www.linkedin.com/in/");
+    items.push({ key: "linkedin", value: prettyUrl(u), href: u, copyValue: u });
+  }
+  const addr = pick(PROFILE.address, lang);
+  if (addr) items.push({ key: "address", value: addr });
+  return items;
+}
+
+/* ---------- 產生 VCF（電子聯絡人檔案） ---------- */
+function vEsc(s) {
+  return String(s).replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
+}
+// compact = true 時是給 QR code 用的精簡版（資料太多 QR code 會太密、不好掃）
+function buildVCard(compact) {
+  const np = PROFILE.nameParts || {};
+  const cjk = /^(zh|ja)/.test(lang);
+  const family = (cjk && np.familyZh) ? np.familyZh : (np.family || "");
+  const given = (cjk && np.givenZh) ? np.givenZh : (np.given || "");
+  const lines = ["BEGIN:VCARD", "VERSION:3.0"];
+  lines.push("N:" + vEsc(family) + ";" + vEsc(given) + ";;;");
+  lines.push("FN:" + vEsc(primaryName()));
+  const org = pick(PROFILE.org, lang);
+  const dept = pick(PROFILE.dept, lang);
+  if (org) lines.push("ORG:" + vEsc(org) + (dept ? ";" + vEsc(dept) : ""));
+  const title = pick(PROFILE.title, lang);
+  if (title) lines.push("TITLE:" + vEsc(title));
+  if (PROFILE.email) lines.push("EMAIL;TYPE=INTERNET:" + PROFILE.email);
+  if (PROFILE.phone) lines.push("TEL;TYPE=CELL:" + PROFILE.phone);
+  if (PROFILE.website) lines.push("URL:" + fullUrl(PROFILE.website, "https://"));
+  if (PROFILE.github) lines.push("URL:" + fullUrl(PROFILE.github, "https://github.com/"));
+  if (PROFILE.linkedin) lines.push("URL:" + fullUrl(PROFILE.linkedin, "https://www.linkedin.com/in/"));
+  const addr = pick(PROFILE.address, lang);
+  if (addr) lines.push("ADR;TYPE=WORK:;;" + vEsc(addr) + ";;;;");
+  const second = secondaryName();
+  if (!compact) {
+    const noteParts = [];
+    if (second) noteParts.push(second);
+    const bio = pick(PROFILE.bio, lang);
+    if (bio) noteParts.push(bio);
+    if (noteParts.length) lines.push("NOTE:" + vEsc(noteParts.join("\n")));
+    if (/^https?:\/\//i.test(PROFILE.photo)) lines.push("PHOTO;VALUE=URI:" + PROFILE.photo);
+  } else if (second) {
+    lines.push("NOTE:" + vEsc(second));
+  }
+  lines.push("END:VCARD");
+  return lines.join("\r\n");
+}
+
+function downloadVCard() {
+  const blob = new Blob([buildVCard(false)], { type: "text/vcard;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = (PROFILE.name.en || "contact").replace(/\s+/g, "_") + ".vcf";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast(I18N[lang].vcfDone);
+}
+
+/* ---------- 複製文字 ---------- */
+function copyText(text) {
+  const t = I18N[lang];
+  const fallback = () => {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "absolute";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    showToast(ok ? t.copied : t.copyFail);
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => showToast(t.copied), fallback);
+  } else {
+    fallback();
+  }
+}
+
+/* ---------- QR code ---------- */
+// QR code 要放的內容：名片網址，或聯絡人資料
+function qrText() {
+  if (qrMode === "vcard") return buildVCard(true);
+  const base = PROFILE.siteUrl || (location.origin + location.pathname);
+  const sep = base.includes("?") ? "&" : "?";
+  return base + sep + "lang=" + encodeURIComponent(lang);
+}
+function makeQR(text) {
+  if (typeof qrcode === "undefined") return null;
+  try {
+    if (qrcode.stringToBytesFuncs && qrcode.stringToBytesFuncs["UTF-8"]) {
+      qrcode.stringToBytes = qrcode.stringToBytesFuncs["UTF-8"]; // 讓中文等文字正確編碼
+    }
+    const qr = qrcode(0, "M");
+    qr.addData(text, "Byte");
+    qr.make();
+    return qr;
+  } catch (e) {
+    return null;
+  }
+}
+// 把 QR code 畫到 canvas 上
+function paintQR(canvas, qr, px) {
+  const n = qr.getModuleCount();
+  const quiet = 4;
+  const total = n + quiet * 2;
+  const scale = Math.max(1, Math.floor(px / total));
+  const size = scale * total;
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = "#0b2545";
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      if (qr.isDark(r, c)) ctx.fillRect((c + quiet) * scale, (r + quiet) * scale, scale, scale);
+    }
+  }
+}
+let currentQR = null;
+function renderQR() {
+  const t = I18N[lang];
+  currentQR = makeQR(qrText());
+  const box = $("qrBox");
+  box.innerHTML = "";
+  if (!currentQR) {
+    box.appendChild(el("div", "qr-fallback", t.qrFail));
+    $("dlQrBtn").disabled = true;
+    return;
+  }
+  $("dlQrBtn").disabled = false;
+  const canvas = document.createElement("canvas");
+  canvas.setAttribute("role", "img");
+  canvas.setAttribute("aria-label", "QR code");
+  paintQR(canvas, currentQR, 220 * Math.min(3, window.devicePixelRatio || 1));
+  box.appendChild(canvas);
+}
+function qrDataUrl(px) {
+  if (!currentQR) return "";
+  const c = document.createElement("canvas");
+  paintQR(c, currentQR, px);
+  return c.toDataURL("image/png");
+}
+function downloadQR() {
+  const url = qrDataUrl(1024);
+  if (!url) return;
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = (PROFILE.name.en || "card").replace(/\s+/g, "_") + "_qr.png";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+/* ---------- 列印用名片 ---------- */
+function buildPrintSheet() {
+  const t = I18N[lang];
+  const sheet = $("printSheet");
+  sheet.innerHTML = "";
+
+  // 正面
+  const front = el("div", "pcard pcard-front");
+  front.appendChild(el("div", "bar"));
+  front.appendChild(el("div", "p-name", primaryName()));
+  const second = secondaryName();
+  if (second) front.appendChild(el("div", "p-name2", second));
+  const role = el("div", "p-role");
+  const title = pick(PROFILE.title, lang);
+  const org = [pick(PROFILE.org, lang), pick(PROFILE.dept, lang)].filter(Boolean).join(" · ");
+  if (title) role.appendChild(el("div", null, title));
+  if (org) role.appendChild(el("div", "org", org));
+  front.appendChild(role);
+  const contacts = el("div", "p-contacts");
+  contactItems().forEach((item) => contacts.appendChild(el("div", null, item.value)));
+  front.appendChild(contacts);
+  sheet.appendChild(front);
+
+  // 背面
+  const back = el("div", "pcard pcard-back");
+  const dataUrl = qrDataUrl(600);
+  if (dataUrl) {
+    const img = document.createElement("img");
+    img.src = dataUrl;
+    img.alt = "QR code";
+    back.appendChild(img);
+  }
+  back.appendChild(el("div", "p-scan", t.scanMe));
+  back.appendChild(el("div", "p-name", primaryName()));
+  sheet.appendChild(back);
+}
+
+/* ---------- 深淺色模式 ---------- */
+function isDark() {
+  const set = document.documentElement.getAttribute("data-theme");
+  if (set) return set === "dark";
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+function updateThemeButton() {
+  const btn = $("themeBtn");
+  btn.innerHTML = svgIcon(isDark() ? "sun" : "moon");
+  btn.setAttribute("aria-label", I18N[lang].theme);
+  btn.title = I18N[lang].theme;
+}
+function toggleTheme() {
+  const next = isDark() ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  store("card-theme", next);
+  updateThemeButton();
+}
+
+/* ---------- 畫面更新（切換語言時重新執行） ---------- */
+function render() {
+  const t = I18N[lang];
+  const langInfo = LANGS.find((l) => l.code === lang);
+  document.documentElement.lang = langInfo ? langInfo.html : lang;
+  document.title = primaryName() + "｜" + t.cardTitle;
+
+  // 固定的介面文字
+  document.querySelectorAll("[data-i18n]").forEach((node) => {
+    const key = node.getAttribute("data-i18n");
+    if (t[key]) node.textContent = t[key];
+  });
+
+  // 頭像
+  const avatar = $("avatar");
+  avatar.innerHTML = "";
+  if (PROFILE.photo) {
+    const img = document.createElement("img");
+    img.src = PROFILE.photo;
+    img.alt = primaryName();
+    img.onerror = () => { avatar.textContent = initials(); };
+    avatar.appendChild(img);
+  } else {
+    avatar.textContent = initials();
+  }
+
+  // 姓名與職稱
+  $("namePrimary").textContent = primaryName();
+  const second = secondaryName();
+  $("nameSecondary").textContent = second;
+  $("nameSecondary").hidden = !second;
+
+  const roleLine = $("roleLine");
+  roleLine.innerHTML = "";
+  const title = pick(PROFILE.title, lang);
+  const org = [pick(PROFILE.org, lang), pick(PROFILE.dept, lang)].filter(Boolean).join(" · ");
+  if (title) roleLine.appendChild(el("span", null, title));
+  if (org) roleLine.appendChild(el("span", "org", org));
+  roleLine.hidden = !title && !org;
+
+  // 關於我
+  const bio = pick(PROFILE.bio, lang);
+  $("bio").textContent = bio;
+  $("aboutSec").hidden = !bio;
+
+  // 聯絡方式
+  const list = $("contactList");
+  list.innerHTML = "";
+  const items = contactItems();
+  items.forEach((item) => {
+    const li = el("li", "contact-item");
+    const icon = el("span", "contact-icon");
+    icon.innerHTML = svgIcon(item.key);
+    li.appendChild(icon);
+
+    const text = el("span", "contact-text");
+    text.appendChild(el("span", "contact-label", t[item.key]));
+    let value;
+    if (item.href) {
+      value = el("a", "contact-value", item.value);
+      value.href = item.href;
+      if (/^https?:/i.test(item.href)) { value.target = "_blank"; value.rel = "noopener"; }
+    } else {
+      value = el("span", "contact-value", item.value);
+    }
+    text.appendChild(value);
+    li.appendChild(text);
+
+    const copyBtn = el("button", "copy-btn");
+    copyBtn.type = "button";
+    copyBtn.innerHTML = svgIcon("copy");
+    copyBtn.setAttribute("aria-label", t.copy + " " + t[item.key]);
+    copyBtn.title = t.copy;
+    copyBtn.addEventListener("click", () => copyText(item.copyValue || item.value));
+    li.appendChild(copyBtn);
+
+    list.appendChild(li);
+  });
+  $("contactSec").hidden = items.length === 0;
+
+  // 專長
+  const skills = pick(PROFILE.skills, lang) || [];
+  const chips = $("skillList");
+  chips.innerHTML = "";
+  skills.forEach((s) => chips.appendChild(el("span", "chip", s)));
+  $("skillsSec").hidden = skills.length === 0;
+
+  // QR code 模式按鈕與說明
+  document.querySelectorAll(".seg-btn").forEach((b) => {
+    const active = b.getAttribute("data-mode") === qrMode;
+    b.classList.toggle("active", active);
+    b.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+  $("qrHint").textContent = qrMode === "vcard" ? t.qrHintVcard : t.qrHintUrl;
+  const warn = $("qrWarn");
+  const localFile = location.protocol === "file:" && !PROFILE.siteUrl;
+  warn.textContent = t.fileWarn;
+  warn.hidden = !(qrMode === "url" && localFile);
+
+  renderQR();
+  updateThemeButton();
+}
+
+/* ---------- 初始化 ---------- */
+function init() {
+  const savedTheme = store("card-theme");
+  if (savedTheme === "light" || savedTheme === "dark") {
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  }
+
+  const select = $("langSelect");
+  LANGS.forEach((l) => {
+    const opt = document.createElement("option");
+    opt.value = l.code;
+    opt.textContent = l.label;
+    select.appendChild(opt);
+  });
+  select.value = lang;
+  select.addEventListener("change", () => {
+    lang = select.value;
+    store("card-lang", lang);
+    render();
+  });
+
+  document.querySelectorAll(".seg-btn").forEach((b) => {
+    b.addEventListener("click", () => {
+      qrMode = b.getAttribute("data-mode");
+      store("card-qr-mode", qrMode);
+      render();
+    });
+  });
+
+  $("themeBtn").addEventListener("click", toggleTheme);
+  $("vcfBtn").addEventListener("click", downloadVCard);
+  $("dlQrBtn").addEventListener("click", downloadQR);
+  $("printBtn").addEventListener("click", () => { buildPrintSheet(); window.print(); });
+  window.addEventListener("beforeprint", buildPrintSheet);
+
+  if (window.matchMedia) {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    if (mq.addEventListener) mq.addEventListener("change", updateThemeButton);
+  }
+
+  render();
+}
+
+init();
+</script>
+</body>
+</html>
